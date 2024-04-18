@@ -29,13 +29,15 @@ for theta in range(T):
 
 circledata = torch.tensor(circledata)
 circletargets = torch.roll(circledata, shifts=2)
+circledata = circledata.unsqueeze(0)
+circletargets = circletargets.unsqueeze(0)
+
     
 circle_dataset = ArrayDataset(circledata, circletargets)
 
+
 # Create DataLoaders
 train_loader = DataLoader(circle_dataset)
-test_loader = DataLoader(circle_dataset)
-
 
 # Define RNNModel
 class RNNModel(nn.Module):
@@ -46,13 +48,10 @@ class RNNModel(nn.Module):
         self.rnncell = nn.RNNCell(input_size, hidden_size)
     
     def forward(self, x, hidden):
-        count = len(x)
-        output = torch.Tensor()
-        for idx in range(count):
-            hidden = self.rnncell(x[idx], hidden)
-            output = torch.cat(output, hidden)
+        hidden = self.rnncell(x, hidden)
+        output = hidden
         return output, hidden
-
+"""
 class RNN_Net(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
         super().__init__()
@@ -62,23 +61,30 @@ class RNN_Net(nn.Module):
     def forward(self, x, hidden):
         output, h = self.rnn(x, hidden)
         return output, h
+"""
 
-net = RNN_Net(1, 64, 1)
-
-def train(epochs, model, x_train, y_train, criterion, optimizer):
+def train(epochs, model, criterion, optimizer):
     losses = []
 
     for epoch in range(epochs):
         print('epoch:', epoch)
         optimizer.zero_grad()
-        hidden = torch.zeros(50, hidden_size)
-        output, hidden = model(x_train, hidden)
-        loss = criterion(output, y_train)
-        loss.backward()
-        optimizer.step()
+        hidden = torch.zeros(hidden_size)
+        for x_train, y_train in train_loader:
+            for timestep in range(len(x_train)):
+                running_loss = 0.
+                x_train = x_train[timestep]
+                x_train = x_train[None]
+                y_train = y_train[timestep]
+                y_train = y_train[None]
+                output, hidden = model(x_train, hidden)
+                loss = criterion(output, y_train)
+                running_loss += loss
+            running_loss.backward()
+            optimizer.step()
 
-        print(f'loss: {loss.item() / len(x_train):.6f}')
-        losses.append(loss.item() / len(x_train))
+        print(f'loss: {running_loss.item() / len(x_train):.6f}')
+        losses.append(running_loss.item() / len(train_loader[0]))
 
     return output, losses
         
@@ -92,15 +98,15 @@ else:
     device = "cpu"
     
 # Define hyperparameters
-input_size = 1  # Input size
-hidden_size = 64  # Hidden layer size
+input_size = 2  # Input size
+hidden_size = 2  # Hidden layer size
 output_size = 1  # Output size
 learning_rate = 0.001  # Learning rate
-num_epochs = 10  # Number of epochs
+num_epochs = 3  # Number of epochs
 
 # Initialize model, loss function, optimizer
-model = RNN_Net(input_size, hidden_size, output_size).to(device)
+model = RNNModel(input_size, hidden_size).to(device)
 criterion = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
-output, losses = train(num_epochs, model, train_loader, test_loader, criterion, optimizer)
+output, losses = train(num_epochs, model, criterion, optimizer)
