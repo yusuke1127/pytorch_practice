@@ -3,6 +3,13 @@ from torch.utils.data import Dataset, DataLoader, random_split
 import torch.nn as nn
 import torch.optim as optim
 
+# Set device
+device = 1
+if device >= 0:
+    device = "cuda:{}".format(device)
+else:
+    device = "cpu"
+
 # Define Dataset
 class ArrayDataset(Dataset):
     def __init__(self, data, targets):
@@ -31,7 +38,6 @@ circledata = torch.tensor(circledata)
 circletargets = torch.roll(circledata, shifts=2)
 circledata = circledata.unsqueeze(0)
 circletargets = circletargets.unsqueeze(0)
-
     
 circle_dataset = ArrayDataset(circledata, circletargets)
 
@@ -69,43 +75,36 @@ def train(epochs, model, criterion, optimizer):
     for epoch in range(epochs):
         print('epoch:', epoch)
         optimizer.zero_grad()
-        hidden = torch.zeros(hidden_size)
+        hidden = torch.zeros(hidden_size).to(device)
         for x_train, y_train in train_loader:
-            for timestep in range(len(x_train)):
+            for timestep in range(x_train.shape[1]):
                 running_loss = 0.
-                x_train = x_train[timestep]
-                x_train = x_train[None]
-                y_train = y_train[timestep]
-                y_train = y_train[None]
-                output, hidden = model(x_train, hidden)
-                loss = criterion(output, y_train)
+                traindata = x_train[0, timestep].to(device)
+                targetdata = y_train[0, timestep].to(device)
+                output, hidden = model(traindata, hidden)
+                output, hidden = output.to(device), hidden.to(device)
+                loss = criterion(output, targetdata)
                 running_loss += loss
             running_loss.backward()
             optimizer.step()
 
         print(f'loss: {running_loss.item() / len(x_train):.6f}')
-        losses.append(running_loss.item() / len(train_loader[0]))
+        losses.append(running_loss.item() / len(train_loader))
 
     return output, losses
         
-# --------------coding...-------------------------        
-        
-# Set device
-device = 1
-if device >= 0:
-    device = "cuda:{}".format(device)
-else:
-    device = "cpu"
+
     
 # Define hyperparameters
 input_size = 2  # Input size
 hidden_size = 2  # Hidden layer size
 output_size = 1  # Output size
 learning_rate = 0.001  # Learning rate
-num_epochs = 3  # Number of epochs
+num_epochs = 500  # Number of epochs
 
 # Initialize model, loss function, optimizer
-model = RNNModel(input_size, hidden_size).to(device)
+model = RNNModel(input_size, hidden_size)
+model = model.to(device)
 criterion = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
