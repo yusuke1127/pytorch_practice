@@ -2,6 +2,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader, random_split
 import torch.nn as nn
 import torch.optim as optim
+import matplotlib.pyplot as plt
 
 # Set device
 device = 1
@@ -109,3 +110,8 @@ criterion = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
 output, losses = train(num_epochs, model, criterion, optimizer)
+
+# Output the results
+fig = plt.figure()
+ax1 = fig.add_subplot(111)
+
