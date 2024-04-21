@@ -3,6 +3,7 @@ from torch.utils.data import Dataset, DataLoader, random_split
 import torch.nn as nn
 import torch.optim as optim
 import matplotlib.pyplot as plt
+import numpy as np
 
 # Set device
 device = 1
@@ -42,9 +43,12 @@ circletargets = circletargets.unsqueeze(0)
     
 circle_dataset = ArrayDataset(circledata, circletargets)
 
-
 # Create DataLoaders
 train_loader = DataLoader(circle_dataset)
+
+# Change tensor to numpy (for output)
+truedata = circledata.to("cpu").detach().numpy()[0]
+outputdata = []
 
 # Define RNNModel
 class RNNModel(nn.Module):
@@ -86,6 +90,12 @@ def train(epochs, model, criterion, optimizer):
                 output, hidden = output.to(device), hidden.to(device)
                 loss = criterion(output, targetdata)
                 running_loss += loss
+                
+                # Last epoch: make outputdata
+                if epoch == epochs - 1:
+                    outputdata_cell = output.to("cpu").detach().numpy()
+                    outputdata.append(outputdata_cell)
+                
             running_loss.backward()
             optimizer.step()
 
@@ -94,14 +104,13 @@ def train(epochs, model, criterion, optimizer):
 
     return output, losses
         
-
-    
+   
 # Define hyperparameters
 input_size = 2  # Input size
 hidden_size = 2  # Hidden layer size
 output_size = 1  # Output size
 learning_rate = 0.001  # Learning rate
-num_epochs = 500  # Number of epochs
+num_epochs = 1000  # Number of epochs
 
 # Initialize model, loss function, optimizer
 model = RNNModel(input_size, hidden_size)
@@ -111,7 +120,19 @@ optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
 output, losses = train(num_epochs, model, criterion, optimizer)
 
+outputdata = np.array([arr for arr in outputdata])
+ 
 # Output the results
-fig = plt.figure()
-ax1 = fig.add_subplot(111)
+true_x = truedata[:, 0]
+true_y = truedata[:, 1]
+predicted_x = outputdata[:, 0]
+predicted_y = outputdata[:, 1]
 
+plt.figure(figsize=(10, 10))
+plt.scatter(true_x, true_y, label="true")
+plt.scatter(predicted_x, predicted_y, label="predicted")
+plt.xlabel("x")
+plt.ylabel("y")
+
+plt.legend()
+plt.savefig("result_pytorch_pr3.png")
