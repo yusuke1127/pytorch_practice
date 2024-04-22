@@ -28,7 +28,7 @@ class ArrayDataset(Dataset):
 
 # Create an instance of the Dataset
 T = 50
-thetalist = torch.linspace(0, 2 * torch.pi, T)
+thetalist = torch.linspace(0, 2 * torch.pi, T + 1)
 circledata = []
 
 for theta in range(T):
@@ -107,7 +107,7 @@ def train(epochs, model, criterion, optimizer):
         losses.append(running_loss.item())
         
         
-        if running_loss.item() < 10e-4:
+        if running_loss.item() < 1e-4:
             for i in range(x_train.shape[1]):
                 outputdata.append(running_outputdata[i])
             break
