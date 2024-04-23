@@ -88,14 +88,17 @@ def train(epochs, model, criterion, optimizer):
         running_loss = 0.
         for x_train, y_train in train_loader:
             for timestep in range(x_train.shape[1]):
-                traindata = x_train[0, timestep].to(device)
+                traindata = x_train[0, 0].to(device)
                 targetdata = y_train[0, timestep].to(device)
                 targetdata = targetdata.view(-1, 2)
-                output, hidden = model(traindata, hidden)
-                output = torch.atanh(output)
+                if timestep == 0:
+                    output, hidden = model(traindata, hidden)
+                else:
+                    output, hidden = model(output[0], hidden)
+                output = torch.atanh(output).to(device)
                 output, hidden = output.to(device), hidden.to(device)
                 loss = criterion(output, targetdata)
-                running_loss += loss / x_train.shape[1]
+                running_loss += loss
                 
                 running_outputdata_cell = output.to("cpu").detach().numpy()
                 running_outputdata.append(running_outputdata_cell)
@@ -103,11 +106,11 @@ def train(epochs, model, criterion, optimizer):
         running_loss.backward()
         optimizer.step()
 
-        print(f'loss: {running_loss.item():.6f}')
-        losses.append(running_loss.item())
+        print(f'loss: {running_loss.item() / x_train.shape[1]:.6f}')
+        losses.append(running_loss.item() / x_train.shape[1])
         
         
-        if running_loss.item() < 1e-4:
+        if running_loss.item() / x_train.shape[1] < 0.003:
             for i in range(x_train.shape[1]):
                 outputdata.append(running_outputdata[i])
             break
