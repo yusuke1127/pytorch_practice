@@ -57,11 +57,11 @@ class RNNModel(nn.Module):
         self.hidden_size = hidden_size
         self.output_size = output_size
         self.rnncell = nn.RNNCell(input_size, hidden_size)
+        self.fc = nn.Linear(hidden_size, output_size)
          
     def forward(self, x, hidden):
-        x = x / 2
         hidden = self.rnncell(x, hidden)
-        output = hidden
+        output = self.fc(hidden)
         output = output.view(-1, 2)
         return output, hidden
 
@@ -73,7 +73,7 @@ def train(epochs, model, criterion, optimizer):
         running_loss = 0.
         for x_train, y_train in train_loader:
             for timestep in range(x_train.shape[1]):
-                traindata = x_train[0, timestep].to(device)
+                traindata = (x_train[0, timestep] / 2).to(device)
                 targetdata = (y_train[0, timestep] / 2).to(device)
                 targetdata = targetdata.view(-1, 2)
                 
@@ -88,7 +88,7 @@ def train(epochs, model, criterion, optimizer):
         
         print('loss: {:.8f}'.format(running_loss.item() / x_train.shape[1]))
         
-        if running_loss.item() / x_train.shape[1] < 1e-5:
+        if running_loss.item() / x_train.shape[1] < 1e-6:
             break
             
     return output
@@ -101,9 +101,9 @@ def test(model):
         for x_test, y_test in train_loader:
             for timestep in range(x_test.shape[1]):
                 if timestep == 0:
-                    input_co = x_test[0, 0].to(device)
+                    input_co = (x_test[0, 0] / 2).to(device)
                 else:
-                    input_co = predicted_co.to(device)
+                    input_co = (predicted_co / 2).to(device)
                 
                 predicted_co, hidden = model(input_co, hidden)
                 predicted_co = predicted_co[0]
@@ -116,7 +116,7 @@ def test(model):
 
 # Define hyperparameters
 input_size = 2  # Input size
-hidden_size = 2  # Hidden layer size
+hidden_size = 32  # Hidden layer size
 output_size = 2  # Output size
 learning_rate = 0.001  # Learning rate
 num_epochs = 30000  # Number of epochs
