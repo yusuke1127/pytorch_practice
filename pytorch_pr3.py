@@ -37,7 +37,7 @@ for theta in range(T):
     circledata.append([x, y])
 
 circledata = torch.tensor(circledata)
-circletargets = torch.roll(circledata, shifts=2)
+circletargets = torch.roll(circledata, -2)
 circledata = circledata.unsqueeze(0)
 circletargets = circletargets.unsqueeze(0)
     
@@ -58,10 +58,11 @@ class RNNModel(nn.Module):
         self.hidden_size = hidden_size
         self.output_size = output_size
         self.rnncell = nn.RNNCell(input_size, hidden_size)
+        self.fc = nn.Linear(hidden_size, output_size)
          
     def forward(self, x, hidden):
         hidden = self.rnncell(x, hidden)
-        output = torch.atanh(hidden)
+        output = self.fc(hidden)
         output = output.view(-1, 2)
         return output, hidden
 
@@ -115,7 +116,7 @@ def test(model):
 
 # Define hyperparameters
 input_size = 2  # Input size
-hidden_size = 2  # Hidden layer size
+hidden_size = 32  # Hidden layer size
 output_size = 2  # Output size
 learning_rate = 0.001  # Learning rate
 num_epochs = 30000  # Number of epochs

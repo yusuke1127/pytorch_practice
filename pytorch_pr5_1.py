@@ -31,13 +31,13 @@ T = 50
 thetalist = torch.linspace(0, 2 * torch.pi, T + 1)
 lissajousdata = []
 
-for theta in range(T + 1):
+for theta in range(T):
     x = torch.sin(thetalist[theta] + torch.pi / 2)
     y = torch.sin(2 * thetalist[theta])
     lissajousdata.append([x, y])
 
 lissajousdata = torch.tensor(lissajousdata)
-lissajoustargets = torch.roll(lissajousdata, shifts=2)
+lissajoustargets = torch.roll(lissajousdata, shifts=-2)
 lissajousdata = lissajousdata.unsqueeze(0)
 lissajoustargets = lissajoustargets.unsqueeze(0)
     
@@ -57,11 +57,13 @@ class RNNModel(nn.Module):
         self.hidden_size = hidden_size
         self.output_size = output_size
         self.rnncell = nn.RNNCell(input_size, hidden_size)
-        self.fc = nn.Linear(hidden_size, output_size)
+        self.fc1 = nn.Linear(hidden_size, hidden_size)
+        self.fc2 = nn.Linear(hidden_size, output_size)
          
     def forward(self, x, hidden):
         hidden = self.rnncell(x, hidden)
-        output = self.fc(hidden)
+        hidden = self.fc1(hidden)
+        output = self.fc2(hidden)
         output = output.view(-1, 2)
         return output, hidden
 
@@ -73,8 +75,8 @@ def train(epochs, model, criterion, optimizer):
         running_loss = 0.
         for x_train, y_train in train_loader:
             for timestep in range(x_train.shape[1]):
-                traindata = (x_train[0, timestep] / 2).to(device)
-                targetdata = (y_train[0, timestep] / 2).to(device)
+                traindata = x_train[0, timestep].to(device)
+                targetdata = y_train[0, timestep].to(device)
                 targetdata = targetdata.view(-1, 2)
                 
                 output, hidden = model(traindata, hidden)
@@ -101,9 +103,9 @@ def test(model):
         for x_test, y_test in train_loader:
             for timestep in range(x_test.shape[1]):
                 if timestep == 0:
-                    input_co = (x_test[0, 0] / 2).to(device)
+                    input_co = x_test[0, 0].to(device)
                 else:
-                    input_co = (predicted_co / 2).to(device)
+                    input_co = predicted_co.to(device)
                 
                 predicted_co, hidden = model(input_co, hidden)
                 predicted_co = predicted_co[0]
@@ -131,7 +133,6 @@ output = train(num_epochs, model, criterion, optimizer)
 
 outputdata = test(model)
 
-outputdata = 2 * outputdata
 outputdata = np.array([arr for arr in outputdata])
 
 
